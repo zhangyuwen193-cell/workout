@@ -7,10 +7,6 @@ function setup() {
   if(!ss)throw new Error('請從專用試算表開啟 Apps Script 後執行 setup。');
   var props=PropertiesService.getScriptProperties();
   props.setProperty('SPREADSHEET_ID',ss.getId());
-  Object.keys(PEOPLE).forEach(function(id){
-    var key='TOKEN_'+id.toUpperCase();
-    if(!props.getProperty(key))props.setProperty(key,(Utilities.getUuid()+Utilities.getUuid()).replace(/-/g,''));
-  });
   ensureSheet_(ss,SNAPSHOT_SHEET,['快照ID','使用者ID','版本','片段','JSON資料','更新時間']);
   Object.keys(PEOPLE).forEach(function(id){
     ensureSheet_(ss,'健身APP_'+PEOPLE[id],['日期','動作','組數','重量(kg)','次數']);
@@ -18,16 +14,14 @@ function setup() {
   });
 }
 
-function doGet(){return output_({ok:true,service:'健身APP 試算表同步',version:1});}
+function doGet(){return output_({ok:true,service:'健身APP 試算表同步',version:2,publicSync:true});}
 function doPost(e){
   var lock;
   try{
     var text=e&&e.postData&&e.postData.contents;
     if(!text||text.length>850000)return output_({ok:false,error:'invalid-request'});
     var input=JSON.parse(text),props=PropertiesService.getScriptProperties();
-    if(!Object.prototype.hasOwnProperty.call(PEOPLE,input.profileId))return output_({ok:false,error:'unauthorized'});
-    var expected=props.getProperty('TOKEN_'+input.profileId.toUpperCase());
-    if(!expected||typeof input.token!=='string'||input.token!==expected)return output_({ok:false,error:'unauthorized'});
+    if(!Object.prototype.hasOwnProperty.call(PEOPLE,input.profileId))return output_({ok:false,error:'invalid-profile'});
     if(['read','write'].indexOf(input.action)<0)return output_({ok:false,error:'invalid-request'});
     if(input.action==='write'&&(!Number.isInteger(input.baseRevision)||input.baseRevision<0||!validData_(input.data)))return output_({ok:false,error:'invalid-data'});
     lock=LockService.getScriptLock();

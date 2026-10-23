@@ -19,11 +19,13 @@ const sandbox={console,PropertiesService:{getScriptProperties:()=>props},Spreads
 const context=vm.createContext(sandbox);vm.runInContext(fs.readFileSync('apps-script/Code.gs','utf8'),context);context.setup();
 const token=values.get('TOKEN_YUCHEN'),brother=values.get('TOKEN_YOULUN');
 context.setup();assert.equal(values.get('TOKEN_YUCHEN'),token);
+assert.equal(JSON.parse(context.doGet().text).publicSync,true);
 function request(input){return JSON.parse(context.doPost({postData:{contents:JSON.stringify(input)}}).text);}
-const call=(action,extra={})=>request({action,profileId:'yuchen',token,...extra});
+const call=(action,extra={})=>request({action,profileId:'yuchen',...extra});
 assert.equal(call('read').remote,null);
-assert.equal(request({action:'read',profileId:'youlun',token}).error,'unauthorized');
-assert.equal(request({action:'read',profileId:'__proto__',token}).error,'unauthorized');
+assert.equal(request({action:'read',profileId:'yuchen',token:'unused-old-code'}).ok,true);
+assert.equal(request({action:'read',profileId:'youlun'}).remote,null);
+assert.equal(request({action:'read',profileId:'__proto__',token}).error,'invalid-profile');
 const data={version:1,days:{'2026-10-23':[{name:'=IMPORTXML("bad")',sets:[{weight:20,reps:10}]}]},weeklyPlan:Array(7).fill('休息')};
 assert.equal(call('write',{baseRevision:0,data}).revision,1);
 assert.deepEqual(call('read').remote.data,data);
@@ -36,4 +38,4 @@ const large={version:1,days:{'2026-10-23':Array.from({length:500},()=>({name:'�
 assert.equal(call('write',{baseRevision:1,data:large}).revision,2);assert.deepEqual(call('read').remote.data,large);
 failPointer=true;assert.equal(call('write',{baseRevision:2,data}).ok,false);assert.equal(call('read').remote.revision,2);
 failPointer=false;assert.equal(call('write',{baseRevision:2,data}).revision,3);assert.deepEqual(call('read').remote.data,data);
-console.log('Passed: Apps Script setup, per-user token authorization, input validation, revisions, chunk roundtrip, formula escaping, failed-commit recovery and separate users.');
+console.log('Passed: Apps Script setup, no-code access, input validation, revisions, chunk roundtrip, formula escaping, failed-commit recovery and separate users.');
