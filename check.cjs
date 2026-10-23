@@ -2,8 +2,9 @@
 const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
 const elements=new Map();const el=()=>({value:'',innerHTML:'',textContent:'',dataset:{},addEventListener(){},classList:{toggle(){}},focus(){},showModal(){},close(){}});
 const storage=new Map();
+let confirmation=true,failStorage=false;
 storage.set('daily-rep-v1',JSON.stringify({version:1,days:{'2026-10-19':[{name:'原始動作',sets:[{weight:10,reps:5}]}]}}));
-const context=vm.createContext({console,Date,Blob,URL,setTimeout,alert(){},confirm(){return true;},localStorage:{getItem(k){return storage.get(k)||null;},setItem(k,v){storage.set(k,v);}},document:{querySelector(s){if(!elements.has(s))elements.set(s,el());return elements.get(s);},querySelectorAll(){return [];}}});
+const context=vm.createContext({console,Date,Blob,URL,setTimeout,alert(){},confirm(){return confirmation;},localStorage:{getItem(k){return storage.get(k)||null;},setItem(k,v){if(failStorage)throw Error("Storage failed");storage.set(k,v);}},document:{querySelector(s){if(!elements.has(s))elements.set(s,el());return elements.get(s);},querySelectorAll(){return [];}}});
 vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 function run(code){return vm.runInContext(code,context);}
 assert.equal(run(`activeUser().name`),'我的紀錄');
@@ -47,7 +48,37 @@ async function checkImport(){
   assert.equal(run(`past('臥推')[0].sets[0].weight`),25);
   assert.equal(run(`db.days['2026-10-18']`),undefined);
   // Reload from v2 must retain both profiles and their independent records.
-  vm.runInContext(`(()=>{${fs.readFileSync('app.js','utf8')}\nif(store.users.length!==2||db.days['2026-10-22'][0].sets[0].weight!==25)throw Error('Reload failed');})()`,context);
+  run(`switchUser('default');$('#editPlan').onclick();plan.forEach((p,d)=>$('#planDay'+d).value=d===5?'游泳':p[1]);$('#planForm').onsubmit({preventDefault(){}});`);
+  assert.equal(run(`weeklyPlan()[5]`),'游泳');
+  assert.match(elements.get('#dayBanner').innerHTML,/游泳/);
+  assert.match(elements.get('#weekPlan').innerHTML,/游泳/);
+  assert.equal(JSON.parse(storage.get('daily-rep-v2')).users[0].data.weeklyPlan[5],'游泳');
+  run(`switchUser('brother');`);
+  assert.equal(run(`weeklyPlan()[5]`),'胸肌、肩膀、三頭肌訓練');
+  assert.doesNotMatch(elements.get('#weekPlan').innerHTML,/游泳/);
+  run(`switchUser('default');$('#editPlan').onclick();plan.forEach((p,d)=>$('#planDay'+d).value=p[1]);$('#planDay1').value='   ';$('#planForm').onsubmit({preventDefault(){}});`);
+  assert.equal(run(`weeklyPlan()[5]`),'游泳');
+  assert.equal(run(`valid({version:1,days:{},weeklyPlan:['bad']})`),false);
+  confirmation=false;
+  run(`$('#deleteUser').onclick();`);
+  assert.equal(run(`store.users.length`),2);
+  confirmation=true;failStorage=true;
+  run(`$('#deleteUser').onclick();`);
+  assert.equal(run(`store.users.length`),2);
+  assert.equal(run(`activeUser().id`),'default');
+  failStorage=false;
+  run(`$('#deleteUser').onclick();`);
+  assert.equal(run(`store.users.length`),1);
+  assert.equal(run(`activeUser().id`),'brother');
+  assert.equal(run(`db.days['2026-10-18'][0].name`),'匯入動作');
+  assert.equal(JSON.parse(storage.get('daily-rep-v2')).users.some(u=>u.id==='default'),false);
+  run(`$('#deleteUser').onclick();`);
+  assert.equal(run(`store.users.length`),1);
+  assert.equal(run(`activeUser().name`),'我的紀錄');
+  assert.equal(run(`Object.keys(db.days).length`),0);
+  assert.equal(run(`validStore(JSON.parse(localStorage.getItem(KEY)))`),true);
+  vm.runInContext(`(()=>{${fs.readFileSync('app.js','utf8')}\nif(store.users.length!==1||Object.keys(db.days).length!==0)throw Error('Reload failed');})()`,context);
+  console.log('Passed: isolated weekly plans, live banner updates, plan validation, cancel deletion, failed-save rollback, deleting one and last user.');
   console.log('Passed: legacy migration, user switching, isolated history and statistics, persistence/reload, duplicate names, rename, and per-user import.');
 }
 checkImport().catch(error=>{console.error(error);process.exitCode=1;});
