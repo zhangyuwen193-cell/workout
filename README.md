@@ -14,11 +14,13 @@
 
 ## 跨裝置同步設定
 
+**可改用 Google 試算表＋Apps Script，無須 Firebase。** 詳見 [試算表同步設定](APPS_SCRIPT_SETUP.md)：將 `apps-script/Code.gs` 貼入專用試算表的 Apps Script，執行 setup 並部署，再把 `/exec` 網址填進 `apps-script-config.js`。目前尚未取得部署網址，仍為本機模式。兩人以各自同步碼連接，資料分開儲存，開啟頁面時每 30 秒檢查更新。
+
 無需安裝 Codex 插件。請依 [設定說明](CLOUD_SETUP.md) 建立 Firebase Authentication、Cloud Firestore 與兩人身分對應，再填入 `firebase-config.js` 的公開網頁設定。不要提交密碼、服務帳號私鑰或管理員憑證。設定完成前仍為本機模式；目前未執行真實雲端、雙裝置與安全規則驗收。
 
 設定後，各自使用同一 Email／密碼在不同裝置登入，紀錄與課表會依登入身分同步。第一次登入先保留本機備份；另一裝置已有不同修改時會顯示衝突，由使用者選擇版本。離線修改暫存本機，恢復連線後重試。
 
-本機驗證：`node check.cjs`、`node sync-check.cjs`。
+本機驗證：`node check.cjs`、`node sync-check.cjs`、`node apps-script-check.cjs`。
 
 ## 固定兩位使用者
 

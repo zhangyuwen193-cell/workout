@@ -1,4 +1,5 @@
 (async function(){
+  if(window.WORKOUT_APPS_SCRIPT_URL)return;
   const config=window.WORKOUT_FIREBASE_CONFIG, bridge=window.workoutBridge;
   const $=s=>document.querySelector(s);
   const message=text=>$('#cloudStatus').textContent=text;
