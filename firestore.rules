@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 由專案擁有者在 Firebase 控制台配置，網頁使用者無權自行綁定身分。
+    match /members/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /profiles/{profileId} {
+      function owner() {
+        return request.auth != null
+          && profileId in ['yuchen', 'youlun']
+          && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.profileId == profileId;
+      }
+      function validSnapshot() {
+        return request.resource.data.keys().hasOnly(['revision', 'payload', 'updatedAt'])
+          && request.resource.data.payload is string
+          && request.resource.data.payload.size() < 800000
+          && request.resource.data.revision is int
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow get: if owner();
+      allow create: if owner() && validSnapshot() && request.resource.data.revision == 1;
+      allow update: if owner() && validSnapshot()
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow list, delete: if false;
+    }
+  }
+}
