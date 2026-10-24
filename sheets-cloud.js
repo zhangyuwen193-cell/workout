@@ -4,12 +4,14 @@
   const bridge=window.workoutBridge,$=s=>document.querySelector(s);
   const message=text=>$('#cloudStatus').textContent=text;
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(endpoint)){message('Apps Script 網址格式不正確，請填入部署的 /exec 網址。');return;}
-  let engine=null,profile=null,connectingId=null,generation=0,polling=false,timer=null,blocked=true,lastData='',statusText='正在自動連接試算表…';
+  let engine=null,profile=null,connectingId=null,generation=0,polling=false,timer=null,blocked=true,lastData='',syncWarning=false,statusText='正在自動連接試算表…';
   $('#cloudLogin').hidden=false;$('#loginForm').hidden=true;$('#logoutButton').hidden=true;
   function paint(){
-    const editable=!blocked&&profile===bridge.profileId()&&engine?.ready&&!engine.conflict;
+    const editable=!blocked&&profile===bridge.profileId()&&engine?.ready;
     $('#trainingEditor').disabled=!editable;$('#editPlan').disabled=!editable;$('#import').disabled=!editable;
     $('#cloudConflict').hidden=!engine?.conflict;
+    $('#syncEditNotice').hidden=!(profile===bridge.profileId()&&engine?.pending&&(engine.conflict||syncWarning));
+    $('#syncEditText').textContent=engine?.conflict?'雲端版本有差異，上傳暫停；你仍可繼續新增組數與記錄，資料會保存在本機。':'尚有紀錄等待同步；你仍可繼續訓練，資料已保存在本機。';
     message(statusText);
   }
   function status(text){statusText=text;paint();}
@@ -31,7 +33,7 @@
       return result;
     }finally{clearTimeout(timeout);}
   }
-  bridge.canEdit=()=>!blocked&&profile===bridge.profileId()&&engine?.ready&&!engine.conflict;
+  bridge.canEdit=()=>!blocked&&profile===bridge.profileId()&&engine?.ready;
   bridge.onRender=()=>{paint();if(profile!==bridge.profileId()&&connectingId!==bridge.profileId()){connectingId=bridge.profileId();queueMicrotask(connect);}};
   bridge.onSaved=()=>{
     if(!bridge.canEdit())return;
@@ -63,7 +65,7 @@
         persist:value=>{if(value)localStorage.setItem(outboxKey,JSON.stringify(value));else localStorage.removeItem(outboxKey);},
         apply:data=>{if(run===generation){lastData=JSON.stringify(data);bridge.replace(id,data);}},
         commit:change=>request('write',id,change),
-        status:(state,error)=>{if(run!==generation)return;const messages={synced:'✓ 已與試算表同步 · 開啟頁面時每 30 秒檢查其他裝置更新',empty:'準備上傳此人的本機紀錄…',pending:'本機已儲存 · 等待上傳試算表',saving:'正在同步到試算表…',conflict:'另一台裝置有不同修改，請先備份，再選擇版本。',error:readError(error||{})};status(messages[state]);}
+        status:(state,error)=>{if(run!==generation)return;syncWarning=state==='error'||state==='conflict';const messages={synced:'✓ 已與試算表同步 · 開啟頁面時每 30 秒檢查其他裝置更新',empty:'準備上傳此人的本機紀錄…',pending:'本機已儲存 · 等待上傳試算表',saving:'正在同步到試算表…',conflict:'雲端版本有差異，上傳暫停；仍可繼續記錄，請先備份再選擇版本。',error:readError(error||{})};status(messages[state]);}
       });
       lastData=JSON.stringify(bridge.readFor(id));if(pending)bridge.replace(id,pending.data);
       blocked=false;$('#cloudIdentity').textContent=`已連接：${name}`;$('#logoutButton').hidden=true;$('#loginForm').hidden=true;$('#loginPassword').value='';

@@ -20,7 +20,9 @@
 
 設定後，各自使用同一 Email／密碼在不同裝置登入，紀錄與課表會依登入身分同步。第一次登入先保留本機備份；另一裝置已有不同修改時會顯示衝突，由使用者選擇版本。離線修改暫存本機，恢復連線後重試。
 
-本機驗證：`node check.cjs`、`node sync-check.cjs`、`node apps-script-check.cjs`。
+本機驗證：`node check.cjs`、`node sync-check.cjs`、`node apps-script-check.cjs`、`node sheets-client-check.cjs`、`node sync-regression-check.cjs`、`node workout-session-check.cjs`。
+
+同步遇到版本衝突時只暫停上傳，不會鎖住訓練輸入；可繼續新增組數並儲存本機，訓練區會提示待處理的同步狀態。沒有更新的背景檢查不會重建表單，避免打斷輸入。上傳中新增的紀錄會接續送出；伺服器寫入成功但回應遺失時，會根據持久化的提交內容辨識自己的寫入，減少誤判衝突。
 
 ## 固定兩位使用者
 

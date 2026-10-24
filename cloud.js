@@ -7,7 +7,7 @@
   $('#cloudLogin').hidden=false;
   let engine=null,auth,fire,api,unsubscribe=null,profile=null,generation=0,timer=null,blocked=true,lastData='',latestRemote=null;
   function paint(){
-    const editable=!blocked&&profile===bridge.profileId()&&engine?.ready&&!engine.conflict;
+    const editable=!blocked&&profile===bridge.profileId()&&engine?.ready;
     $('#trainingEditor').disabled=!editable;
     $('#editPlan').disabled=!editable;
     $('#import').disabled=!editable;
