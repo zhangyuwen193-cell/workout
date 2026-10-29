@@ -28,6 +28,9 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
  for(let i=0;i<24;i++){if(i)clickAction('addSet');typeSet(i,'weight',20+i*.25);typeSet(i,'reps',10);if(i%3===2)await flushDebounce();}
  await flushDebounce();assert.equal(remote.data.days[$('#date').value][0].sets.length,24);
  assert.equal($('#trainingEditor').disabled,false);
+ run('openExercise(0)');$('#exerciseName').value='修正後臥推';$('#exerciseForm').onsubmit({preventDefault(){}});await flushDebounce();
+ assert.equal(remote.data.days[$('#date').value][0].name,'修正後臥推');assert.equal(remote.data.days[$('#date').value][0].sets.length,24);
+ run('openExercise()');assert.match($('#savedExercise').innerHTML,/修正後臥推/);$('#savedExercise').onchange({target:{value:'修正後臥推'}});assert.equal($('#exerciseName').value,'修正後臥推');
  const renders=$('#exercises').renders;for(let i=0;i<5;i++)await poll();assert.equal($('#exercises').renders,renders);
  // Introduce a genuine second-device edit while there are unsent local changes.
  clickAction('addSet');typeSet(24,'weight',30);typeSet(24,'reps',8);
