@@ -1,0 +1,21 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),Engine=require('./sync-engine.js');
+const clone=v=>JSON.parse(JSON.stringify(v)),elements=new Map(),storage=new Map();
+let local={version:1,days:{'2026-10-25':[{name:'本機同日',sets:[]}],'2026-10-29':[{name:'尚未上傳',sets:[{weight:30,reps:8}]}]}};
+let remote={revision:48,data:{version:1,days:{'2026-10-25':[{name:'雲端同日',sets:[]}]}}};
+const bridge={profileId:()=> 'yuchen',name:()=> '張語宸',read:()=>clone(local),readFor:()=>clone(local),valid:v=>v.version===1,replace(_id,v){local=clone(v);bridge.onRender?.();}};
+const window={WORKOUT_APPS_SCRIPT_URL:'https://script.google.com/macros/s/recovery-test/exec',workoutBridge:bridge,WorkoutSyncEngine:Engine,addEventListener(){}};
+const context=vm.createContext({window,Date,queueMicrotask,AbortController,URL,Blob,navigator:{onLine:true},confirm:()=>true,alert:m=>{throw Error(m);},setTimeout:()=>1,clearTimeout(){},setInterval(){},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},document:{hidden:false,addEventListener(){},querySelector(s){if(!elements.has(s))elements.set(s,{hidden:false,disabled:false,value:'',textContent:''});return elements.get(s);}},fetch:async(_url,options)=>{const body=JSON.parse(options.body);if(body.action==='read')return {ok:true,json:async()=>({ok:true,remote:clone(remote)})};assert.equal(body.baseRevision,remote.revision);remote={revision:remote.revision+1,data:clone(body.data)};return {ok:true,json:async()=>({ok:true,revision:remote.revision})};}});
+vm.runInContext(fs.readFileSync('sheets-cloud.js','utf8'),context);
+(async()=>{
+ await new Promise(setImmediate);
+ assert.equal(local.days['2026-10-29'][0].name,'尚未上傳');
+ assert.equal(elements.get('#cloudConflict').hidden,false);
+ assert.equal(remote.revision,48,'Must not upload or overwrite automatically');
+ assert.ok([...storage.keys()].some(k=>k.startsWith('workout-sheets-recovery-')));
+ elements.get('#recoverDates').onclick();await new Promise(setImmediate);
+ assert.equal(remote.revision,49);
+ assert.equal(remote.data.days['2026-10-29'][0].sets[0].weight,30);
+ assert.equal(remote.data.days['2026-10-25'][0].name,'雲端同日','Existing cloud dates must remain untouched');
+ assert.ok([...storage.keys()].some(k=>k.startsWith('workout-recovery-before-merge-')));
+ console.log('Passed: local-only dates protected on reconnect, no automatic overwrite, explicit missing-date recovery and backup of same-day differences.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

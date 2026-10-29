@@ -59,7 +59,12 @@
       if(!localStorage.getItem(backupKey))localStorage.setItem(backupKey,JSON.stringify({...bridge.readFor(id),userName:name}));
       $('#beforeSyncBackup').hidden=false;
       $('#beforeSyncBackup').onclick=()=>{const url=URL.createObjectURL(new Blob([localStorage.getItem(backupKey)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`健身APP-${name}-同步前備份.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-      const raw=localStorage.getItem(outboxKey),pending=raw?JSON.parse(raw):null;
+      const raw=localStorage.getItem(outboxKey);let pending=raw?JSON.parse(raw):null;
+      const local=bridge.readFor(id),missing=first.remote?Object.keys(local.days).filter(d=>!Object.prototype.hasOwnProperty.call(first.remote.data.days,d)&&local.days[d].length):[];
+      if(!pending&&missing.length){
+        localStorage.setItem('workout-sheets-recovery-'+namespace+'-'+id+'-'+Date.now(),JSON.stringify({...local,userName:name}));
+        pending={baseRevision:Math.max(0,first.remote.revision-1),data:local};localStorage.setItem(outboxKey,JSON.stringify(pending));
+      }
       if(pending&&(!bridge.valid(pending.data)||!Number.isInteger(pending.baseRevision)||pending.baseRevision<0))throw Error('Invalid outbox');
       engine=new window.WorkoutSyncEngine({pending,
         persist:value=>{if(value)localStorage.setItem(outboxKey,JSON.stringify(value));else localStorage.removeItem(outboxKey);},
@@ -78,6 +83,15 @@
   $('#retrySync').onclick=poll;
   $('#useCloud').onclick=()=>{if(!engine?.conflict||!engine.remote||!confirm('確定使用試算表版本取代本機修改？請先匯出備份。'))return;const remote=engine.remote;engine.pending=null;engine.persist(null);engine.receive(remote);};
   $('#useLocal').onclick=()=>{if(!engine?.conflict||!confirm('確定以此裝置的本機版本取代試算表資料？其他裝置將接收此版本。'))return;engine.pending.baseRevision=engine.revision;engine.conflict=false;engine.remember();engine.flush();paint();};
+  $('#recoverDates').onclick=()=>{
+    if(!engine?.pending||!engine.remote)return;
+    const local=engine.pending.data,remote=engine.remote.data,missing=Object.keys(local.days).filter(d=>!Object.prototype.hasOwnProperty.call(remote.days,d)&&local.days[d].length);
+    if(!missing.length){alert('沒有雲端缺少的日期。若同一天內容不同，請先匯出備份再選擇版本。');return;}
+    if(!confirm('將補上 '+missing.join('、')+' 的本機紀錄，雲端已有日期不會更動。確定繼續？'))return;
+    const merged=JSON.parse(JSON.stringify(remote));missing.forEach(d=>merged.days[d]=JSON.parse(JSON.stringify(local.days[d])));
+    localStorage.setItem('workout-recovery-before-merge-'+Date.now(),JSON.stringify({...local,userName:bridge.name()}));
+    engine.pending={baseRevision:engine.revision,data:merged};engine.conflict=false;engine.remember();lastData=JSON.stringify(merged);bridge.replace(profile,merged);engine.flush();paint();
+  };
   $('#useCloud').textContent='使用試算表版本';$('#useLocal').textContent='以本機版本取代試算表';
   window.addEventListener('online',poll);window.addEventListener('focus',poll);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});setInterval(poll,30000);connect();
 })();
