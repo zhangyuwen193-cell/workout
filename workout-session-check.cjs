@@ -42,5 +42,10 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
  const pendingKey=[...storage.keys()].find(k=>k.startsWith('workout-sheets-outbox-'));
  assert.equal(JSON.parse(storage.get(pendingKey)).data.days[$('#date').value][0].sets.length,37);
  assert.equal(remote.data.days[$('#date').value][0].sets.length,24,'Remote must remain protected during conflict');
+ run("date='2040-10-30';$('#date').value=date;db.days[date]=[{name:'搬移測試',sets:[{weight:40,reps:8}]}];");
+ $('#moveDay').onclick();$('#moveDate').value='2040-10-29';$('#moveForm').onsubmit({preventDefault(){}});
+ assert.equal(run("db.days['2040-10-30']"),undefined);assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);assert.equal($('#date').value,'2040-10-29');
+ assert.ok([...storage.keys()].some(k=>k.startsWith('workout-before-move-')));
+ console.log('Passed: whole-day move preserves sets, removes source, creates backup and queues sync.');
  console.log('Passed: actual handlers record 24 sets across repeated uploads and polls; 12 more sets remain editable and durable during a real version conflict.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

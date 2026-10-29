@@ -54,6 +54,21 @@ $('#progressExercise').onchange=renderHistory;
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.panel').forEach(p=>p.hidden=p.id!==b.dataset.tab);document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('active',t===b));if(b.dataset.tab==='progress')progress();});
 $('#export').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({...db,userName:activeUser().name},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`daily-rep-${activeUser().name.replace(/[\\/:*?"<>|]/g,'_')}-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('#import').onchange=async e=>{const file=e.target.files[0];if(!file||!canEdit())return;const importingProfile=store.activeUserId;try{if(file.size>10000000)throw Error();const data=JSON.parse(await file.text());if(importingProfile!==store.activeUserId||!canEdit())throw Error();if(!valid(data))throw Error();if(!confirm(`匯入會取代「${activeUser().name}」的所有紀錄，其他使用者不受影響。建議先匯出目前資料。確定匯入？`))return;db={version:1,days:data.days,...((data.weeklyPlan||db.weeklyPlan)?{weeklyPlan:data.weeklyPlan||db.weeklyPlan}:{})};activeUser().data=db;const saved=save();renderWeek();render();progress();if(saved)alert('備份已匯入目前使用者。');}catch{alert('無法匯入：請選擇本站匯出的有效 JSON 備份（10 MB 以下）。');}finally{e.target.value='';}};
+let movingDay=null;
+$('#moveDay').onclick=()=>{if(!canEdit())return;if(!entries().length){alert('這一天沒有可搬移的紀錄。');return;}movingDay={date,profile:store.activeUserId};$('#moveSource').textContent=`將 ${activeUser().name} ${date} 的全部 ${entries().length} 個動作搬到：`;$('#moveDate').value=localDate();$('#moveDialog').showModal();};
+$('#cancelMove').onclick=()=>$('#moveDialog').close();
+$('#moveForm').onsubmit=e=>{e.preventDefault();if(!canEdit())return;
+  if(!movingDay||movingDay.date!==date||movingDay.profile!==store.activeUserId){alert('日期或使用者已切換，請重新選擇要搬移的紀錄。');return;}
+  const target=$('#moveDate').value,source=movingDay.date;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(target)||localDate(new Date(target+'T12:00:00'))!==target||target===source){alert('請選擇不同且有效的目的日期。');return;}
+  if(!db.days[source]?.length){alert('來源日期已沒有紀錄。');return;}
+  if(db.days[target]?.length){alert('目的日期已有紀錄，為避免覆蓋，本次不會搬移。請先匯出備份並整理目的日期。');return;}
+  if(!confirm(`確定將 ${source} 的全部紀錄搬移到 ${target}？原日期將不再保留這些動作。`))return;
+  try{localStorage.setItem(`workout-before-move-${store.activeUserId}-${Date.now()}`,JSON.stringify({...db,userName:activeUser().name}));}catch{alert('無法建立搬移前備份，已取消搬移。');return;}
+  const previous=JSON.parse(JSON.stringify(db.days));db.days[target]=db.days[source];delete db.days[source];
+  if(!save()){db.days=previous;return;}
+  date=target;$('#date').value=target;render();progress();$('#moveDialog').close();
+};
 renderUsers();render();save();
 if(typeof window!=='undefined')window.workoutBridge={
  profileId:()=>store.activeUserId,name:()=>activeUser().name,read:()=>JSON.parse(JSON.stringify(db)),readFor:id=>JSON.parse(JSON.stringify(store.users.find(u=>u.id===id).data)),valid,select:switchUser,
