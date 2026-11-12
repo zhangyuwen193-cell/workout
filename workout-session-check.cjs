@@ -46,6 +46,10 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
  $('#moveDay').onclick();$('#moveDate').value='2040-10-29';$('#moveForm').onsubmit({preventDefault(){}});
  assert.equal(run("db.days['2040-10-30']"),undefined);assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);assert.equal($('#date').value,'2040-10-29');
  assert.ok([...storage.keys()].some(k=>k.startsWith('workout-before-move-')));
+ $('#history').click({target:{closest:()=>({dataset:{historyDate:'2040-10-29',historyIndex:'0'}})}});
+ assert.equal($('#exerciseSubmit').textContent,'儲存修改');$('#exerciseName').value='修正歷史動作';$('#exerciseForm').onsubmit({preventDefault(){}});
+ assert.equal(run("db.days['2040-10-29'][0].name"),'修正歷史動作');assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);
+ console.log('Passed: historical workout name editing retains completed set data.');
  console.log('Passed: whole-day move preserves sets, removes source, creates backup and queues sync.');
  console.log('Passed: actual handlers record 24 sets across repeated uploads and polls; 12 more sets remain editable and durable during a real version conflict.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
