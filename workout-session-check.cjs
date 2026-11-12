@@ -25,7 +25,7 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
 (async()=>{
  await settle();assert.equal($('#trainingEditor').disabled,false);
  $('#exerciseName').value='測試臥推';$('#exerciseBodyPart').value ||= '其他';$('#exerciseForm').onsubmit({preventDefault(){}});
- $('#exerciseBodyPart').value='胸肌';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/槓鈴臥推/);assert.doesNotMatch($('#savedExercise').innerHTML,/啞鈴肩推/);$('#exerciseBodyPart').value='肩膀';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/啞鈴肩推/);assert.doesNotMatch($('#savedExercise').innerHTML,/槓鈴臥推/);
+ $('#exerciseBodyPart').value='胸肌';run('filterExercises()');assert.doesNotMatch($('#savedExercise').innerHTML,/槓鈴臥推|啞鈴肩推|（做過）/);$('#exerciseBodyPart').value='其他';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/測試臥推/);assert.doesNotMatch($('#savedExercise').innerHTML,/（做過）/);
  for(let i=0;i<24;i++){if(i)clickAction('addSet');typeSet(i,'weight',20+i*.25);typeSet(i,'reps',10);if(i%3===2)await flushDebounce();}
  await flushDebounce();assert.equal(remote.data.days[$('#date').value][0].sets.length,24);
  assert.equal($('#trainingEditor').disabled,false);
