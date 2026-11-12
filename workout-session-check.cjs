@@ -24,13 +24,14 @@ function typeSet(index,key,value){$('#exercises').input({target:{dataset:{i:'0',
 async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=>job.ms===1000);for(const [id,job]of jobs){timers.delete(id);await job.fn();}await settle();}
 (async()=>{
  await settle();assert.equal($('#trainingEditor').disabled,false);
- $('#exerciseName').value='測試臥推';$('#exerciseForm').onsubmit({preventDefault(){}});
+ $('#exerciseName').value='測試臥推';$('#exerciseBodyPart').value ||= '其他';$('#exerciseForm').onsubmit({preventDefault(){}});
+ $('#exerciseBodyPart').value='胸肌';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/槓鈴臥推/);assert.doesNotMatch($('#savedExercise').innerHTML,/啞鈴肩推/);$('#exerciseBodyPart').value='肩膀';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/啞鈴肩推/);assert.doesNotMatch($('#savedExercise').innerHTML,/槓鈴臥推/);
  for(let i=0;i<24;i++){if(i)clickAction('addSet');typeSet(i,'weight',20+i*.25);typeSet(i,'reps',10);if(i%3===2)await flushDebounce();}
  await flushDebounce();assert.equal(remote.data.days[$('#date').value][0].sets.length,24);
  assert.equal($('#trainingEditor').disabled,false);
- run('openExercise(0)');$('#exerciseName').value='修正後臥推';$('#exerciseForm').onsubmit({preventDefault(){}});await flushDebounce();
+ run('openExercise(0)');$('#exerciseName').value='修正後臥推';$('#exerciseBodyPart').value ||= '其他';$('#exerciseForm').onsubmit({preventDefault(){}});await flushDebounce();
  assert.equal(remote.data.days[$('#date').value][0].name,'修正後臥推');assert.equal(remote.data.days[$('#date').value][0].sets.length,24);
- run('openExercise()');assert.match($('#savedExercise').innerHTML,/修正後臥推/);$('#savedExercise').onchange({target:{value:'修正後臥推'}});assert.equal($('#exerciseName').value,'修正後臥推');
+ run('openExercise()');$('#exerciseBodyPart').value='其他';run('filterExercises()');assert.match($('#savedExercise').innerHTML,/修正後臥推/);$('#savedExercise').onchange({target:{value:'修正後臥推'}});assert.equal($('#exerciseName').value,'修正後臥推');
  const renders=$('#exercises').renders;for(let i=0;i<5;i++)await poll();assert.equal($('#exercises').renders,renders);
  // Introduce a genuine second-device edit while there are unsent local changes.
  clickAction('addSet');typeSet(24,'weight',30);typeSet(24,'reps',8);
@@ -47,7 +48,7 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
  assert.equal(run("db.days['2040-10-30']"),undefined);assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);assert.equal($('#date').value,'2040-10-29');
  assert.ok([...storage.keys()].some(k=>k.startsWith('workout-before-move-')));
  $('#history').click({target:{closest:()=>({dataset:{historyDate:'2040-10-29',historyIndex:'0'}})}});
- assert.equal($('#exerciseSubmit').textContent,'儲存修改');$('#exerciseName').value='修正歷史動作';$('#exerciseForm').onsubmit({preventDefault(){}});
+ assert.equal($('#exerciseSubmit').textContent,'儲存修改');$('#exerciseName').value='修正歷史動作';$('#exerciseBodyPart').value ||= '其他';$('#exerciseForm').onsubmit({preventDefault(){}});
  assert.equal(run("db.days['2040-10-29'][0].name"),'修正歷史動作');assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);
  console.log('Passed: historical workout name editing retains completed set data.');
  console.log('Passed: whole-day move preserves sets, removes source, creates backup and queues sync.');
