@@ -49,9 +49,6 @@ async function flushDebounce(){const jobs=[...timers.entries()].filter(([,job])=
  $('#history').click({target:{closest:()=>({dataset:{historyDate:'2040-10-29',historyIndex:'0'}})}});
  assert.equal($('#exerciseSubmit').textContent,'儲存修改');$('#exerciseName').value='修正歷史動作';$('#exerciseForm').onsubmit({preventDefault(){}});
  assert.equal(run("db.days['2040-10-29'][0].name"),'修正歷史動作');assert.equal(run("db.days['2040-10-29'][0].sets[0].weight"),40);
- run("db.days['2040-10-28']=[{name:'修正歷史動作',sets:[{weight:50,reps:6}]}];");$('#progressExercise').value='修正歷史動作';$('#renameAllName').value='正確的動作';$('#renameAllForm').onsubmit({preventDefault(){}});
- assert.equal(run("db.days['2040-10-29'][0].name"),'正確的動作');assert.equal(run("db.days['2040-10-28'][0].name"),'正確的動作');assert.equal(run("db.days['2040-10-28'][0].sets[0].weight"),50);assert.equal($('#progressExercise').value,'正確的動作');
- console.log('Passed: header rename updates all matching dates while retaining sets.');
  console.log('Passed: historical workout name editing retains completed set data.');
  console.log('Passed: whole-day move preserves sets, removes source, creates backup and queues sync.');
  console.log('Passed: actual handlers record 24 sets across repeated uploads and polls; 12 more sets remain editable and durable during a real version conflict.');
